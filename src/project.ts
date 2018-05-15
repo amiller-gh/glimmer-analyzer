@@ -19,10 +19,12 @@ export interface ResolutionMap {
 export class Template {
   string: string;
   specifier: string;
+  path: string;
 
-  constructor(templateString: string, specifier: string) {
+  constructor(templateString: string, specifier: string, path: string) {
     this.string = templateString;
     this.specifier = specifier;
+    this.path = path;
   }
 }
 
@@ -34,6 +36,7 @@ export interface ProjectPaths {
 export interface ProjectOptions {
   environment?: string;
   paths?: Partial<ProjectPaths>;
+  config?: Config;
 }
 
 const DEFAULT_PATHS = {
@@ -60,7 +63,13 @@ export default class Project {
     debug(`creating project; dir=%s; env=%s; paths=%o`, projectDir, this.environment, this.paths);
 
     this.loadPackageJSON(projectDir);
-    this.loadEnvironmentConfig(projectDir, this.environment);
+
+    if (options.config) {
+      this.config = options.config;
+    }
+    else {
+      this.loadEnvironmentConfig(projectDir, this.environment);
+    }
 
     this.buildResolverConfig();
   }
@@ -69,18 +78,13 @@ export default class Project {
     if (this._map) { return this._map; }
 
     let { resolverConfig: moduleConfig, projectDir } = this;
-    let modulePrefix = (moduleConfig.app && moduleConfig.app.rootName) || 'app';
-
+    let modulePrefix = moduleConfig.app && moduleConfig.app.rootName || 'app';
     let map = buildResolutionMap({
       projectDir,
       moduleConfig,
-      modulePrefix
+      modulePrefix,
+      srcDir: this.paths.src
     });
-
-    // We can stop doing this if/when https://github.com/glimmerjs/resolution-map-builder/pull/27 is merged.
-    for (let key in map) {
-      map[key] = `src/${map[key]}`;
-    }
 
     return this._map = map;
   }
@@ -99,26 +103,25 @@ export default class Project {
 
   get resolver(): Resolver {
     if (this._resolver) { return this._resolver; }
-
     return this._resolver = new Resolver(this.resolverConfig, this.registry);
   }
 
   get registry(): BasicModuleRegistry {
     if (this._registry) { return this._registry; }
-
     return this._registry = new BasicModuleRegistry(this.map);
   }
 
   templateFor(templateName: string) {
     let specifier = this.resolver.identify(`template:${templateName}`);
+
     if (!specifier) {
       throw new Error(`Couldn't find template for component ${templateName} in Glimmer app ${this.projectDir}.`)
     }
 
     let templatePath = this.resolver.resolve(specifier);
-    let templateString = fs.readFileSync(path.join(this.projectDir, templatePath), 'utf8');
+    let templateString = fs.readFileSync(path.join(this.projectDir, templatePath) + '.hbs', 'utf8');
 
-    return new Template(templateString, specifier);
+    return new Template(templateString, specifier, templatePath);
   }
 
   specifierForPath(objectPath: string): string | null {

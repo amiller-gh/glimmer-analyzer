@@ -1,4 +1,4 @@
-import Project, { ResolutionMap } from './project';
+import Project, { ResolutionMap, ProjectOptions } from './project';
 import {
   discoverTemplateDependencies,
   discoverRecursiveTemplateDependencies,
@@ -8,8 +8,8 @@ import {
 class Analyzer {
   project: Project;
 
-  constructor(projectDir: string) {
-    this.project = new Project(projectDir);
+  constructor(projectDir: string, options: ProjectOptions = {}) {
+    this.project = new Project(projectDir, options);
   }
 
   dependenciesForTemplate(componentName: string) {

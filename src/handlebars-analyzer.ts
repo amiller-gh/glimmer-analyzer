@@ -38,6 +38,14 @@ export function discoverTemplateDependencies(templateName: string, project: Proj
         if (specifier) {
           helpers.add(pathFromSpecifier(specifier));
         }
+
+        // In Ember apps components may still be referred to using `{{}}`
+        else {
+          let specifier = resolver.identify(`template:${node.path.original}`, template.specifier);
+          if (specifier) {
+            components.add(pathFromSpecifier(specifier));
+          }
+        }
       }
     },
 
@@ -60,6 +68,15 @@ export function discoverTemplateDependencies(templateName: string, project: Proj
       if (specifier) {
         components.add(pathFromSpecifier(specifier));
       }
+    },
+
+    // In Ember apps components may still be referred to using `{{}}`
+    BlockStatement(node) {
+      let { original } = node.path;
+      let specifier = resolver.identify(`template:${original}`, template.specifier);
+      if (specifier) {
+        components.add(pathFromSpecifier(specifier));
+      }
     }
   });
 
@@ -79,6 +96,7 @@ function specifierForHelper({ path }: AST.MustacheStatement | AST.SubExpression)
 
 function isComponentHelper({ path }: AST.MustacheStatement | AST.SubExpression) {
   return path.type === 'PathExpression'
+    && path.parts
     && path.parts.length === 1
     && path.parts[0] === 'component';
 }
