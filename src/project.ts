@@ -31,6 +31,7 @@ export class Template {
 export interface ProjectPaths {
   config: string;
   src: string;
+  pjson: string;
 }
 
 export interface ProjectOptions {
@@ -41,7 +42,8 @@ export interface ProjectOptions {
 
 const DEFAULT_PATHS = {
   src: 'src',
-  config: 'config'
+  config: 'config',
+  pjson: '.',
 };
 
 export default class Project {
@@ -119,7 +121,7 @@ export default class Project {
     }
 
     let templatePath = this.resolver.resolve(specifier);
-    let templateString = fs.readFileSync(path.join(this.projectDir, templatePath) + '.hbs', 'utf8');
+    let templateString = fs.readFileSync(path.join(this.projectDir, this.paths.src, templatePath), 'utf8');
 
     return new Template(templateString, specifier, templatePath);
   }
@@ -133,7 +135,7 @@ export default class Project {
   }
 
   protected loadPackageJSON(projectDir: string) {
-    let pkgPath = path.join(projectDir, 'package.json');
+    let pkgPath = path.join(projectDir, this.paths.pjson, 'package.json');
     let pkg: PackageJSON = loadPackageJSON(pkgPath);
 
     this.pkg = pkg;
